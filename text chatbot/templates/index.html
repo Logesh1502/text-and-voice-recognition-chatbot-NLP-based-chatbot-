@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Fine/Query Chatbot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/traffic_bot.png') }}">
+    <style>
+        @keyframes gradientBackground {
+    0% { background-position: 0% 0%; }
+    25% { background-position: 100% 0%; }
+    50% { background-position: 100% 100%; }
+    75% { background-position: 0% 100%; }
+    100% { background-position: 0% 0%; }
+}
+
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab, #fffc00, #00ff87);
+    background-size: 600% 600%;
+    animation: gradientBackground 20s ease infinite;
+    margin: 0;
+    padding: 0;
+}
+
+
+        .chat-container {
+            width: 400px;
+            max-width: 100%;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 90vh;
+            margin: 5vh auto;
+ /* Center the container */
+ 
+        }
+ 
+
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            background-color: #075e54;
+            color: white;
+            padding: 15px;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            transition: background-color 0.3s ease;
+        }
+
+        .chat-header.black {
+            background-color: black; /* Yellow color for general rules dataset */
+        }
+
+        .bot-logo, .user-logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .chat-title h3 {
+            margin: 0;
+            font-size: 16px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .chat-title p {
+            margin: 0;
+            font-size: 12px;
+            color: #d3d3d3;
+        }
+
+        .chat-icons {
+            margin-left: auto;
+            display: flex;
+            gap: 15px;
+        }
+
+        .chat-icons i {
+            cursor: pointer;
+            font-size: 18px;
+            transition: transform 0.3s ease;
+        }
+
+        .chat-icons i:hover {
+            transform: scale(1.1);
+        }
+
+        .dataset-buttons {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background-color: #128c7e;
+            border-bottom: 1px solid #ccc;
+        }
+
+        .dataset-buttons button {
+            background-color: #25d366;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .dataset-buttons button:hover {
+            background-color: #20b954;
+            transform: translateY(-4px);
+        }
+
+        .chat-box {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #e5ddd5;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+
+        .message p {
+            margin: 0;
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 80%;
+            font-size: 14px;
+            line-height: 1.4;
+            font-family: 'Arial', sans-serif;
+        }
+
+        .message.bot p {
+            background-color: #dcf8c6;
+            align-self: flex-start;
+        }
+
+        .message.user p {
+            background-color: #34b7f1;
+            color: white;
+            align-self: flex-end;
+        }
+
+        .message img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-right: 5px;
+        }
+
+        .timestamp {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+            align-self: flex-end;
+        }
+
+        .user-input {
+            display: flex;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-top: 1px solid #ccc;
+        }
+
+        .user-input input {
+            flex-grow: 1;
+            border: none;
+            border-radius: 20px;
+            padding: 10px;
+            margin-right: 10px;
+            font-size: 14px;
+            font-family: 'Verdana', sans-serif;
+        }
+
+        .user-input button {
+            background-color: #075e54;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            position: relative;
+        }
+
+        .user-input .voice-btn {
+            background-color: #25d366;
+            animation: none;
+        }
+
+        .user-input .voice-btn.recording {
+            background-color: #128c7e;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+            }
+            50% {
+                transform: scale(1.1);
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            animation: fadeInModal 0.3s ease-in-out;
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 300px;
+            border-radius: 10px;
+            animation: zoomIn 0.3s ease;
+        }
+
+        .modal-content h4 {
+            margin-top: 0;
+            font-size: 18px;
+            font-family: 'Georgia', serif;
+            text-align: center;
+        }
+
+        .modal-content button {
+            background-color: #075e54;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        @keyframes fadeInModal {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes zoomIn {
+            from {
+                transform: scale(0.8);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header" id="chat-header">
+            <img src="{{ url_for('static', filename='images/chatbot.jpg') }}" alt="Chatbot Logo" class="bot-logo">
+            <div class="chat-title">
+                <h3>Chatbot</h3>
+                <p>Online</p>
+            </div>
+            <div class="chat-icons">
+                <i class="fas fa-cog" onclick="openSettings()"></i>
+                <i class="fas fa-question-circle" onclick="openHelp()"></i>
+            </div>
+        </div>
+        <div class="dataset-buttons">
+            <button onclick="switchDataset('traffic')">Traffic Fine</button>
+            <button onclick="switchDataset('general')">General Rules</button>
+        </div>
+        <div class="chat-box" id="chat-box">
+            <div class="message bot intro">
+                <p>Welcome to the chatbot! Select a dataset to start the conversation.</p>
+                <span class="timestamp">10:00 AM</span>
+            </div>
+        </div>
+        <div class="user-input">
+            <input type="text" id="user-message" placeholder="Type a message">
+            <button onclick="sendMessage()"><i class="fas fa-paper-plane"></i></button>
+            <button class="voice-btn" id="voice-btn" onclick="voiceSearch()"><i class="fas fa-microphone"></i></button>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeSettings()">&times;</span>
+            <h4>Settings</h4>
+            <button onclick="closeSettings()">Close</button>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeHelp()">&times;</span>
+            <h4>Help</h4>
+            <p>Here is some help information.</p>
+            <button onclick="closeHelp()">Close</button>
+        </div>
+    </div>
+
+    <script>
+        function appendMessage(sender, message) {
+            const chatBox = document.getElementById('chat-box');
+            const messageElement = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            messageElement.classList.add('message', sender);
+            messageElement.innerHTML = `<p>${sender === 'bot' ? '<img src="{{ url_for('static', filename='images/chatbot.jpg') }}" alt="Bot Logo">' : ''} ${message}</p><span class="timestamp">${timestamp}</span>`;
+            chatBox.insertBefore(messageElement, chatBox.firstChild); // Insert at the top for reverse order
+            chatBox.scrollTop = chatBox.scrollHeight; // Scroll to the bottom
+        }
+
+        function sendMessage() {
+            const userInput = document.getElementById('user-message').value.trim();
+            if (userInput === '') return;
+
+            appendMessage('user', userInput);
+            document.getElementById('user-message').value = '';
+
+            fetch('/get_response', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ message: userInput }),
+            })
+            .then(response => response.json())
+            .then(data => appendMessage('bot', data.response))
+            .catch(error => console.error('Error:', error));
+        }
+
+        function voiceSearch() {
+            const voiceBtn = document.querySelector('.voice-btn');
+            voiceBtn.classList.add('recording');
+            appendMessage('user', 'Recording...');
+
+            fetch('/voice_input', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                voiceBtn.classList.remove('recording');
+                appendMessage('user', data.user_input);
+                appendMessage('bot', data.response);
+            })
+            .catch(error => {
+                voiceBtn.classList.remove('recording');
+                console.error('Error:', error);
+            });
+        }
+
+        function switchDataset(dataset) {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = '';  // Clear chat box when switching datasets
+
+            fetch('/select_dataset', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ dataset: dataset }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const header = document.getElementById('chat-header');
+                const container=document.getElementById('chat-container');
+                if (dataset === 'traffic') {
+                    header.classList.remove('black');
+                   
+       
+                } else {
+                    header.classList.add('black');
+                   
+                }
+                const introMessage = dataset === 'traffic'
+                    ? 'You have selected the Traffic Fine dataset. Ask me anything about traffic fines and penalties.'
+                    : 'You have selected the General Rules dataset. Ask me anything about general rules and regulations.';
+                appendMessage('bot', introMessage);
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function openSettings() {
+            console.log('Opening settings modal');
+            document.getElementById('settingsModal').style.display = 'block';
+        }
+
+        function closeSettings() {
+            console.log('Closing settings modal');
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+
+        function openHelp() {
+            console.log('Opening help modal');
+            document.getElementById('helpModal').style.display = 'block';
+        }
+
+        function closeHelp() {
+            console.log('Closing help modal');
+            document.getElementById('helpModal').style.display = 'none';
+        }
+
+        // Close modals when clicking outside of them
+        window.onclick = function(event) {
+            const settingsModal = document.getElementById('settingsModal');
+            const helpModal = document.getElementById('helpModal');
+            if (event.target === settingsModal) {
+                settingsModal.style.display = 'none';
+            } else if (event.target === helpModal) {
+                helpModal.style.display = 'none';
+            }
+        };
+    </script>
+</body>
+</html>

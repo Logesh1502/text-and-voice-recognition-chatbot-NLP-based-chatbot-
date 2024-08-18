@@ -1,0 +1,69 @@
+from flask import Flask, render_template, request, jsonify
+import sounddevice as sd
+import wave
+import speech_recognition as sr
+from chatterbot import ChatBot
+from chatterbot.trainers import ListTrainer
+import os
+
+app = Flask(__name__)
+
+# Initialize the ChatBot
+bot = ChatBot('TrafficBot')
+trainer = ListTrainer(bot)
+
+# Training the ChatBot
+trainer.train([
+    'What is the penalty for driving without a valid license in India?',
+    'Driving without a valid license in India can result in a fine of up to Rs. 5,000 and/or imprisonment of up to 3 months for the first offense.',
+    'How much is the fine for overspeeding in India?',
+    'The fine for overspeeding in India varies based on the vehicle type and speed limit violation. Generally, fines can range from Rs. 400 to Rs. 2,000.',
+    # Add more training data here as needed...
+])
+
+# Audio recording parameters
+samplerate = 44100
+duration = 10
+filename = "recorded_audio.wav"
+
+def record_audio():
+    audio_data = sd.rec(int(duration * samplerate), samplerate=samplerate, channels=1, dtype='int16')
+    sd.wait()
+
+    with wave.open(filename, 'wb') as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(samplerate)
+        wf.writeframes(audio_data.tobytes())
+
+def speech_to_text(filename):
+    recognizer = sr.Recognizer()
+    with sr.AudioFile(filename) as source:
+        audio = recognizer.record(source)
+    try:
+        return recognizer.recognize_google(audio)
+    except sr.UnknownValueError:
+        return "Sorry, I could not understand the audio."
+    except sr.RequestError as e:
+        return f"Could not request results from Google; {e}"
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/get_response', methods=['POST'])
+def get_response():
+    user_input = request.json.get('message')
+    response = bot.get_response(user_input)
+    return jsonify({'response': str(response)})
+
+@app.route('/voice_input', methods=['POST'])
+def voice_input():
+    record_audio()
+    user_input = speech_to_text(filename)
+    os.remove(filename)
+    response = bot.get_response(user_input)
+    return jsonify({'response': str(response), 'user_input': user_input})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0')
